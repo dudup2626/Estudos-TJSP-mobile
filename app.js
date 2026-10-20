@@ -3,6 +3,7 @@
 
   const STORAGE_KEY = 'tjsp-estudos-v1';
   const THEME_KEY = 'tjsp-estudos-theme';
+  const page = document.body.dataset.page || 'home';
 
   const curriculum = [
     {
@@ -158,27 +159,11 @@
     }
   ];
 
-  const state = loadState();
+  let state = loadState();
   let currentFilter = 'all';
   let currentSearch = '';
   let flashcardSearchTerm = '';
   let reviewState = { folderId: null, order: [], index: 0, flipped: false };
-
-  const subjectList = document.getElementById('subjectList');
-  const subjectTemplate = document.getElementById('subjectTemplate');
-  const topicTemplate = document.getElementById('topicTemplate');
-  const searchInput = document.getElementById('searchInput');
-  const topicCounter = document.getElementById('topicCounter');
-  const overallPct = document.getElementById('overallPct');
-  const progressRing = document.getElementById('progressRing');
-  const countdown = document.getElementById('countdown');
-  const statusMessage = document.getElementById('statusMessage');
-  const flashcardFolderList = document.getElementById('flashcardFolderList');
-  const flashcardCounter = document.getElementById('flashcardCounter');
-  const flashcardSearch = document.getElementById('flashcardSearch');
-  const folderForm = document.getElementById('folderForm');
-  const folderNameInput = document.getElementById('folderNameInput');
-  const reviewPanel = document.getElementById('reviewPanel');
 
   function emptyState() {
     return { completed: {}, notes: {}, openSubjects: {}, flashcardFolders: [], openFlashcardFolders: {} };
@@ -196,22 +181,65 @@
         flashcardFolders: Array.isArray(parsed.flashcardFolders) ? parsed.flashcardFolders : [],
         openFlashcardFolders: parsed.openFlashcardFolders && typeof parsed.openFlashcardFolders === 'object' ? parsed.openFlashcardFolders : {}
       };
-    } catch (_) {
-      return emptyState();
-    }
+    } catch (_) { return emptyState(); }
   }
 
-  function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }
-
+  function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
   function topicKey(subjectId, index) { return `${subjectId}::${index}`; }
   function allTopics() { return curriculum.flatMap(s => s.topics.map((topic, i) => ({ subject: s, topic, index: i, key: topicKey(s.id, i) }))); }
-
+  function topicStats() {
+    const topics = allTopics();
+    const done = topics.reduce((sum, t) => sum + (state.completed[t.key] ? 1 : 0), 0);
+    return { total: topics.length, done, pct: topics.length ? Math.round((done / topics.length) * 100) : 0 };
+  }
   function subjectStats(subject) {
     const total = subject.topics.length;
     const done = subject.topics.reduce((sum, _, i) => sum + (state.completed[topicKey(subject.id, i)] ? 1 : 0), 0);
     return { total, done, pct: total ? Math.round((done / total) * 100) : 0 };
+  }
+
+  function makeId(prefix) {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') return `${prefix}-${window.crypto.randomUUID()}`;
+    return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  function normalizeFlashcardFolders() {
+    state.flashcardFolders = (Array.isArray(state.flashcardFolders) ? state.flashcardFolders : []).map(folder => ({
+      id: typeof folder.id === 'string' && folder.id ? folder.id : makeId('folder'),
+      name: typeof folder.name === 'string' && folder.name.trim() ? folder.name.trim() : 'Matéria sem nome',
+      cards: (Array.isArray(folder.cards) ? folder.cards : []).map(card => ({
+        id: typeof card.id === 'string' && card.id ? card.id : makeId('card'),
+        theme: typeof card.theme === 'string' ? card.theme : '',
+        remember: typeof card.remember === 'string' ? card.remember : ''
+      })).filter(card => card.theme.trim() || card.remember.trim())
+    }));
+    if (!state.openFlashcardFolders || typeof state.openFlashcardFolders !== 'object') state.openFlashcardFolders = {};
+  }
+  function totalFlashcards() { return state.flashcardFolders.reduce((sum, folder) => sum + folder.cards.length, 0); }
+  function findFlashcardFolder(folderId) { return state.flashcardFolders.find(folder => folder.id === folderId) || null; }
+
+  function updateCountdown() {
+    const countdown = document.getElementById('countdown');
+    if (!countdown) return;
+    const diff = new Date(2027, 2, 14, 12, 0, 0) - new Date();
+    if (diff <= 0) { countdown.textContent = 'Data prevista da prova alcançada.'; return; }
+    const days = Math.ceil(diff / 86400000);
+    countdown.textContent = `${days} ${days === 1 ? 'dia' : 'dias'} até a prova`;
+  }
+
+  function updateHome() {
+    const stats = topicStats();
+    const overallPct = document.getElementById('overallPct');
+    const progressRing = document.getElementById('progressRing');
+    const topicProgress = document.getElementById('homeTopicProgress');
+    const cardCount = document.getElementById('homeFlashcardCount');
+    if (overallPct) overallPct.textContent = `${stats.pct}%`;
+    if (progressRing) progressRing.style.setProperty('--progress', `${stats.pct * 3.6}deg`);
+    if (topicProgress) topicProgress.textContent = `${stats.done} de ${stats.total} tópicos estudados`;
+    if (cardCount) {
+      const total = totalFlashcards();
+      cardCount.textContent = `${total} ${total === 1 ? 'cartão criado' : 'cartões criados'}`;
+    }
   }
 
   function matches(topic, subject, index) {
@@ -222,7 +250,12 @@
     return filterMatch && searchMatch;
   }
 
-  function render() {
+  function renderContent() {
+    const subjectList = document.getElementById('subjectList');
+    const subjectTemplate = document.getElementById('subjectTemplate');
+    const topicTemplate = document.getElementById('topicTemplate');
+    const topicCounter = document.getElementById('topicCounter');
+    if (!subjectList || !subjectTemplate || !topicTemplate) return;
     subjectList.innerHTML = '';
     let visibleTopics = 0;
     let visibleSubjects = 0;
@@ -232,25 +265,18 @@
       if (!visible.length) continue;
       visibleSubjects += 1;
       visibleTopics += visible.length;
-
       const card = subjectTemplate.content.firstElementChild.cloneNode(true);
       const header = card.querySelector('.subject-header');
       const body = card.querySelector('.subject-body');
       const list = card.querySelector('.topic-list');
-      const icon = card.querySelector('.subject-icon');
       const stats = subjectStats(subject);
       const explicitQuestionText = subject.questions ? `${subject.questions} questões` : (subject.block === 'Bloco II' ? '30 questões no bloco de Direito' : subject.block);
-
-      icon.textContent = subject.icon;
+      card.querySelector('.subject-icon').textContent = subject.icon;
       card.querySelector('h3').textContent = subject.name;
-      card.querySelector('.subject-meta').textContent = `${subject.block} • ${explicitQuestionText} • ${stats.done}/${stats.total} tópicos`;
-      card.querySelector('.subject-pct').textContent = `${stats.pct}%`;
-      card.querySelector('.progress-track span').style.width = `${stats.pct}%`;
-
+      updateCardStats(card, subject);
       const shouldOpen = !!state.openSubjects[subject.id] || !!currentSearch || currentFilter !== 'all';
       header.setAttribute('aria-expanded', String(shouldOpen));
       body.hidden = !shouldOpen;
-
       header.addEventListener('click', () => {
         const expanded = header.getAttribute('aria-expanded') === 'true';
         header.setAttribute('aria-expanded', String(!expanded));
@@ -267,48 +293,32 @@
         const noteToggle = item.querySelector('.note-toggle');
         const noteBox = item.querySelector('.note-box');
         const textarea = item.querySelector('textarea');
-
         checkbox.checked = !!state.completed[key];
         topicText.textContent = topic;
         item.classList.toggle('is-done', checkbox.checked);
         textarea.value = state.notes[key] || '';
         noteToggle.classList.toggle('has-note', !!textarea.value.trim());
-
         checkbox.addEventListener('change', () => {
           state.completed[key] = checkbox.checked;
           item.classList.toggle('is-done', checkbox.checked);
           saveState();
-          updateProgressOnly();
           updateCardStats(card, subject);
-          if (currentFilter !== 'all') render();
+          if (currentFilter !== 'all') renderContent();
+          else if (topicCounter) topicCounter.textContent = `${topicStats().done}/${topicStats().total} estudados`;
         });
-
-        noteToggle.addEventListener('click', () => {
-          noteBox.hidden = !noteBox.hidden;
-          if (!noteBox.hidden) textarea.focus();
-        });
-
-        textarea.addEventListener('input', () => {
-          state.notes[key] = textarea.value;
-          noteToggle.classList.toggle('has-note', !!textarea.value.trim());
-          saveState();
-        });
-
+        noteToggle.addEventListener('click', () => { noteBox.hidden = !noteBox.hidden; if (!noteBox.hidden) textarea.focus(); });
+        textarea.addEventListener('input', () => { state.notes[key] = textarea.value; noteToggle.classList.toggle('has-note', !!textarea.value.trim()); saveState(); });
         list.appendChild(item);
       }
-
       subjectList.appendChild(card);
     }
-
     if (!visibleSubjects) {
-      const empty = document.createElement('div');
-      empty.className = 'empty-state';
-      empty.textContent = 'Nenhum tópico encontrado com este filtro.';
-      subjectList.appendChild(empty);
+      const empty = document.createElement('div'); empty.className = 'empty-state'; empty.textContent = 'Nenhum tópico encontrado com este filtro.'; subjectList.appendChild(empty);
     }
-
-    topicCounter.textContent = `${visibleTopics}/${allTopics().length}`;
-    updateProgressOnly();
+    if (topicCounter) {
+      if (currentFilter === 'all' && !currentSearch) { const s = topicStats(); topicCounter.textContent = `${s.done}/${s.total} estudados`; }
+      else topicCounter.textContent = `${visibleTopics} encontrados`;
+    }
   }
 
   function updateCardStats(card, subject) {
@@ -319,529 +329,155 @@
     card.querySelector('.progress-track span').style.width = `${stats.pct}%`;
   }
 
-  function updateProgressOnly() {
-    const topics = allTopics();
-    const done = topics.reduce((sum, t) => sum + (state.completed[t.key] ? 1 : 0), 0);
-    const pct = topics.length ? Math.round((done / topics.length) * 100) : 0;
-    overallPct.textContent = `${pct}%`;
-    progressRing.style.setProperty('--progress', `${pct * 3.6}deg`);
-  }
-
-  function updateCountdown() {
-    const now = new Date();
-    const exam = new Date(2027, 2, 14, 12, 0, 0);
-    const diff = exam - now;
-    if (diff <= 0) {
-      countdown.textContent = 'Data prevista da prova alcançada.';
-      return;
-    }
-    const days = Math.ceil(diff / 86400000);
-    countdown.textContent = `${days} ${days === 1 ? 'dia' : 'dias'} até a prova`;
-  }
-
-  function showStatus(message, isError = false) {
-    statusMessage.textContent = message;
-    statusMessage.style.color = isError ? 'var(--danger)' : 'var(--success)';
-    window.setTimeout(() => { if (statusMessage.textContent === message) statusMessage.textContent = ''; }, 4500);
-  }
-
-  function makeId(prefix) {
-    if (window.crypto && typeof window.crypto.randomUUID === 'function') return `${prefix}-${window.crypto.randomUUID()}`;
-    return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  }
-
-  function totalFlashcards() {
-    return state.flashcardFolders.reduce((sum, folder) => sum + (Array.isArray(folder.cards) ? folder.cards.length : 0), 0);
-  }
-
-  function normalizeFlashcardFolders() {
-    state.flashcardFolders = (Array.isArray(state.flashcardFolders) ? state.flashcardFolders : []).map(folder => ({
-      id: typeof folder.id === 'string' && folder.id ? folder.id : makeId('folder'),
-      name: typeof folder.name === 'string' && folder.name.trim() ? folder.name.trim() : 'Matéria sem nome',
-      cards: (Array.isArray(folder.cards) ? folder.cards : []).map(card => ({
-        id: typeof card.id === 'string' && card.id ? card.id : makeId('card'),
-        theme: typeof card.theme === 'string' ? card.theme : '',
-        remember: typeof card.remember === 'string' ? card.remember : ''
-      })).filter(card => card.theme.trim() || card.remember.trim())
-    }));
-    if (!state.openFlashcardFolders || typeof state.openFlashcardFolders !== 'object') state.openFlashcardFolders = {};
-  }
-
-  function findFlashcardFolder(folderId) {
-    return state.flashcardFolders.find(folder => folder.id === folderId) || null;
-  }
-
   function flashcardMatches(card, folderName) {
     const needle = flashcardSearchTerm.trim().toLocaleLowerCase('pt-BR');
-    if (!needle) return true;
-    return `${folderName} ${card.theme} ${card.remember}`.toLocaleLowerCase('pt-BR').includes(needle);
+    return !needle || `${folderName} ${card.theme} ${card.remember}`.toLocaleLowerCase('pt-BR').includes(needle);
   }
 
   function createButton(text, className, action) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = text;
-    btn.className = className;
-    btn.addEventListener('click', action);
-    return btn;
+    const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = text; btn.className = className; btn.addEventListener('click', action); return btn;
   }
 
   function renderFlashcards() {
+    const list = document.getElementById('flashcardFolderList');
+    const counter = document.getElementById('flashcardCounter');
+    if (!list) return;
     normalizeFlashcardFolders();
-    flashcardFolderList.innerHTML = '';
-
+    list.innerHTML = '';
     const total = totalFlashcards();
     const folderCount = state.flashcardFolders.length;
-    flashcardCounter.textContent = folderCount ? `${folderCount} ${folderCount === 1 ? 'pasta' : 'pastas'} • ${total} ${total === 1 ? 'cartão' : 'cartões'}` : '0 cartões';
-
+    if (counter) counter.textContent = folderCount ? `${folderCount} ${folderCount === 1 ? 'pasta' : 'pastas'} • ${total} ${total === 1 ? 'cartão' : 'cartões'}` : '0 cartões';
     const needle = flashcardSearchTerm.trim().toLocaleLowerCase('pt-BR');
-    const visibleFolders = state.flashcardFolders.filter(folder => {
-      if (!needle) return true;
-      if (folder.name.toLocaleLowerCase('pt-BR').includes(needle)) return true;
-      return folder.cards.some(card => flashcardMatches(card, folder.name));
-    });
-
+    const visibleFolders = state.flashcardFolders.filter(folder => !needle || folder.name.toLocaleLowerCase('pt-BR').includes(needle) || folder.cards.some(card => flashcardMatches(card, folder.name)));
     if (!visibleFolders.length) {
-      const empty = document.createElement('div');
-      empty.className = 'empty-state';
-      empty.textContent = folderCount ? 'Nenhum flashcard encontrado com essa busca.' : 'Nenhuma pasta criada ainda. Crie uma pasta para a primeira matéria.';
-      flashcardFolderList.appendChild(empty);
-      renderReview();
-      return;
+      const empty = document.createElement('div'); empty.className = 'empty-state'; empty.textContent = folderCount ? 'Nenhum flashcard encontrado com essa busca.' : 'Nenhuma pasta criada ainda. Crie uma pasta para a primeira matéria.'; list.appendChild(empty); return;
     }
 
     for (const folder of visibleFolders) {
-      const article = document.createElement('article');
-      article.className = 'flash-folder';
+      const article = document.createElement('article'); article.className = 'flash-folder';
+      const header = document.createElement('button'); header.type = 'button'; header.className = 'flash-folder-header';
+      const isOpen = !!state.openFlashcardFolders[folder.id] || !!needle; header.setAttribute('aria-expanded', String(isOpen));
+      const titleWrap = document.createElement('div'); titleWrap.className = 'flash-folder-title';
+      const icon = document.createElement('div'); icon.className = 'flash-folder-icon'; icon.textContent = '▣';
+      const text = document.createElement('div'); const h3 = document.createElement('h3'); h3.textContent = folder.name; const meta = document.createElement('p'); meta.textContent = `${folder.cards.length} ${folder.cards.length === 1 ? 'flashcard' : 'flashcards'}`; text.append(h3, meta); titleWrap.append(icon, text);
+      const chev = document.createElement('span'); chev.className = 'chevron'; chev.textContent = '⌄'; header.append(titleWrap, chev);
+      const body = document.createElement('div'); body.className = 'flash-folder-body'; body.hidden = !isOpen;
+      header.addEventListener('click', () => { const expanded = header.getAttribute('aria-expanded') === 'true'; header.setAttribute('aria-expanded', String(!expanded)); body.hidden = expanded; state.openFlashcardFolders[folder.id] = !expanded; saveState(); });
 
-      const header = document.createElement('button');
-      header.type = 'button';
-      header.className = 'flash-folder-header';
-      const isOpen = !!state.openFlashcardFolders[folder.id] || !!needle;
-      header.setAttribute('aria-expanded', String(isOpen));
+      const actions = document.createElement('div'); actions.className = 'folder-actions';
+      const study = createButton('▶ Estudar pasta', 'btn primary study-folder-btn', () => startFolderReview(folder.id)); study.disabled = !folder.cards.length;
+      actions.append(study, createButton('Renomear', 'btn secondary', () => renameFolder(folder.id)), createButton('Excluir pasta', 'btn danger', () => deleteFolder(folder.id))); body.appendChild(actions);
 
-      const titleWrap = document.createElement('div');
-      titleWrap.className = 'flash-folder-title';
-      const icon = document.createElement('div');
-      icon.className = 'flash-folder-icon';
-      icon.textContent = '▣';
-      const titleText = document.createElement('div');
-      const h3 = document.createElement('h3');
-      h3.textContent = folder.name;
-      const meta = document.createElement('p');
-      meta.textContent = `${folder.cards.length} ${folder.cards.length === 1 ? 'flashcard' : 'flashcards'}`;
-      titleText.append(h3, meta);
-      titleWrap.append(icon, titleText);
-      const chevron = document.createElement('span');
-      chevron.className = 'chevron';
-      chevron.textContent = '⌄';
-      header.append(titleWrap, chevron);
-
-      const body = document.createElement('div');
-      body.className = 'flash-folder-body';
-      body.hidden = !isOpen;
-
-      header.addEventListener('click', () => {
-        const expanded = header.getAttribute('aria-expanded') === 'true';
-        header.setAttribute('aria-expanded', String(!expanded));
-        body.hidden = expanded;
-        state.openFlashcardFolders[folder.id] = !expanded;
-        saveState();
-      });
-
-      const actions = document.createElement('div');
-      actions.className = 'folder-actions';
-      const studyBtn = createButton('▶ Estudar pasta', 'btn primary study-folder-btn', () => startFolderReview(folder.id));
-      studyBtn.disabled = folder.cards.length === 0;
-      if (studyBtn.disabled) studyBtn.title = 'Adicione pelo menos um flashcard.';
-      actions.append(
-        studyBtn,
-        createButton('Renomear', 'btn secondary', () => renameFolder(folder.id)),
-        createButton('Excluir pasta', 'btn secondary', () => deleteFolder(folder.id))
-      );
-      body.appendChild(actions);
-
-      const grid = document.createElement('div');
-      grid.className = 'flashcard-grid';
+      const grid = document.createElement('div'); grid.className = 'flashcard-grid';
       const visibleCards = needle ? folder.cards.filter(card => flashcardMatches(card, folder.name)) : folder.cards;
-
-      if (!visibleCards.length) {
-        const empty = document.createElement('div');
-        empty.className = 'folder-empty';
-        empty.textContent = folder.cards.length ? 'Nenhum cartão desta pasta corresponde à busca.' : 'Esta pasta ainda não tem flashcards.';
-        grid.appendChild(empty);
-      }
-
+      if (!visibleCards.length) { const empty = document.createElement('p'); empty.className = 'folder-empty'; empty.textContent = folder.cards.length ? 'Nenhum cartão desta pasta corresponde à busca.' : 'Esta pasta ainda não tem flashcards.'; grid.appendChild(empty); }
       for (const card of visibleCards) {
-        const entry = document.createElement('div');
-        entry.className = 'flashcard-entry';
-        const flip = document.createElement('button');
-        flip.type = 'button';
-        flip.className = 'flashcard-flip';
-        flip.setAttribute('aria-label', 'Virar flashcard');
-
-        const kicker = document.createElement('span');
-        kicker.className = 'flashcard-kicker';
-        kicker.textContent = 'TEMA';
-        const content = document.createElement('strong');
-        content.className = 'flashcard-content';
-        content.textContent = card.theme || '(sem tema)';
-        const hint = document.createElement('small');
-        hint.textContent = 'Toque para ver o que devo lembrar';
-        flip.append(kicker, content, hint);
-
+        const entry = document.createElement('article'); entry.className = 'flashcard-entry';
+        const flip = document.createElement('button'); flip.type = 'button'; flip.className = 'flashcard-flip'; flip.setAttribute('aria-label','Virar flashcard');
+        const kicker = document.createElement('span'); kicker.className = 'flashcard-kicker'; kicker.textContent = 'TEMA';
+        const content = document.createElement('strong'); content.className = 'flashcard-content'; content.textContent = card.theme;
+        const tip = document.createElement('small'); tip.textContent = 'Toque para revelar o que lembrar'; flip.append(kicker, content, tip);
         let flipped = false;
-        flip.addEventListener('click', () => {
-          flipped = !flipped;
-          entry.classList.toggle('is-flipped', flipped);
-          kicker.textContent = flipped ? 'O QUE DEVO LEMBRAR' : 'TEMA';
-          content.textContent = flipped ? (card.remember || '(sem conteúdo)') : (card.theme || '(sem tema)');
-          hint.textContent = flipped ? 'Toque para voltar ao tema' : 'Toque para ver o que devo lembrar';
-        });
-
-        const itemActions = document.createElement('div');
-        itemActions.className = 'flashcard-item-actions';
-        itemActions.append(
-          createButton('Editar', '', () => editFlashcard(folder.id, card.id)),
-          createButton('Excluir', '', () => deleteFlashcard(folder.id, card.id))
-        );
-        entry.append(flip, itemActions);
-        grid.appendChild(entry);
+        flip.addEventListener('click', () => { flipped = !flipped; entry.classList.toggle('is-flipped', flipped); kicker.textContent = flipped ? 'O QUE DEVO LEMBRAR' : 'TEMA'; content.textContent = flipped ? card.remember : card.theme; });
+        const itemActions = document.createElement('div'); itemActions.className = 'flashcard-item-actions'; itemActions.append(createButton('Editar','',()=>editFlashcard(folder.id,card.id)), createButton('Excluir','',()=>deleteFlashcard(folder.id,card.id))); entry.append(flip,itemActions); grid.appendChild(entry);
       }
-
       body.appendChild(grid);
-
-      const addBtn = createButton('+ Adicionar flashcard', 'add-card-btn', () => showCardForm(body, folder.id, addBtn));
-      body.appendChild(addBtn);
-
-      article.append(header, body);
-      flashcardFolderList.appendChild(article);
+      const add = createButton('+ Adicionar flashcard','add-card-btn',()=>showCardForm(body,folder.id,add)); body.appendChild(add);
+      article.append(header,body); list.appendChild(article);
     }
-
-    renderReview();
   }
 
   function showCardForm(folderBody, folderId, triggerButton) {
     if (folderBody.querySelector('.card-form')) return;
     triggerButton.hidden = true;
-
-    const form = document.createElement('form');
-    form.className = 'inline-form card-form';
-
-    const themeLabel = document.createElement('label');
-    const themeSpan = document.createElement('span');
-    themeSpan.textContent = 'Tema';
-    const themeInput = document.createElement('input');
-    themeInput.type = 'text';
-    themeInput.maxLength = 180;
-    themeInput.placeholder = 'Ex.: Peculato — art. 312 do Código Penal';
-    themeInput.required = true;
-    themeLabel.append(themeSpan, themeInput);
-
-    const rememberLabel = document.createElement('label');
-    rememberLabel.style.marginTop = '10px';
-    const rememberSpan = document.createElement('span');
-    rememberSpan.textContent = 'O que devo lembrar';
-    const rememberInput = document.createElement('textarea');
-    rememberInput.maxLength = 1200;
-    rememberInput.placeholder = 'Escreva a definição, regra, exceção, artigo, macete ou ponto que precisa memorizar.';
-    rememberInput.required = true;
-    rememberLabel.append(rememberSpan, rememberInput);
-
-    const formActions = document.createElement('div');
-    formActions.className = 'inline-form-actions';
-    const saveBtn = document.createElement('button');
-    saveBtn.type = 'submit';
-    saveBtn.className = 'btn primary';
-    saveBtn.textContent = 'Salvar flashcard';
-    const cancelBtn = createButton('Cancelar', 'btn secondary', () => {
-      form.remove();
-      triggerButton.hidden = false;
-    });
-    formActions.append(saveBtn, cancelBtn);
-    form.append(themeLabel, rememberLabel, formActions);
-
-    form.addEventListener('submit', event => {
-      event.preventDefault();
-      const theme = themeInput.value.trim();
-      const remember = rememberInput.value.trim();
-      if (!theme || !remember) return;
-      const folder = findFlashcardFolder(folderId);
-      if (!folder) return;
-      folder.cards.push({ id: makeId('card'), theme, remember });
-      state.openFlashcardFolders[folderId] = true;
-      saveState();
-      renderFlashcards();
-    });
-
-    folderBody.appendChild(form);
-    themeInput.focus();
+    const form = document.createElement('form'); form.className = 'inline-form card-form';
+    const themeLabel = document.createElement('label'); themeLabel.innerHTML = '<span>Tema</span>'; const themeInput = document.createElement('input'); themeInput.type='text'; themeInput.maxLength=180; themeInput.placeholder='Ex.: Peculato — art. 312 do Código Penal'; themeInput.required=true; themeLabel.appendChild(themeInput);
+    const rememberLabel = document.createElement('label'); rememberLabel.className='form-gap'; rememberLabel.innerHTML='<span>O que devo lembrar</span>'; const rememberInput=document.createElement('textarea'); rememberInput.maxLength=1200; rememberInput.placeholder='Escreva a definição, regra, exceção, artigo, macete ou ponto que precisa memorizar.'; rememberInput.required=true; rememberLabel.appendChild(rememberInput);
+    const actions=document.createElement('div'); actions.className='inline-form-actions'; const save=document.createElement('button'); save.type='submit'; save.className='btn primary'; save.textContent='Salvar flashcard'; const cancel=createButton('Cancelar','btn secondary',()=>{form.remove();triggerButton.hidden=false;}); actions.append(save,cancel); form.append(themeLabel,rememberLabel,actions);
+    form.addEventListener('submit',e=>{ e.preventDefault(); const theme=themeInput.value.trim(), remember=rememberInput.value.trim(); if(!theme||!remember)return; const folder=findFlashcardFolder(folderId); if(!folder)return; folder.cards.push({id:makeId('card'),theme,remember}); state.openFlashcardFolders[folderId]=true; saveState(); renderFlashcards(); });
+    folderBody.appendChild(form); themeInput.focus();
   }
 
-  function createFolder(name) {
-    const cleaned = name.trim();
-    if (!cleaned) return;
-    const folder = { id: makeId('folder'), name: cleaned, cards: [] };
-    state.flashcardFolders.push(folder);
-    state.openFlashcardFolders[folder.id] = true;
-    saveState();
-    renderFlashcards();
-  }
-
-  function renameFolder(folderId) {
-    const folder = findFlashcardFolder(folderId);
-    if (!folder) return;
-    const name = window.prompt('Novo nome da matéria/pasta:', folder.name);
-    if (name === null) return;
-    const cleaned = name.trim();
-    if (!cleaned) return;
-    folder.name = cleaned.slice(0, 80);
-    saveState();
-    renderFlashcards();
-  }
-
-  function deleteFolder(folderId) {
-    const folder = findFlashcardFolder(folderId);
-    if (!folder) return;
-    const count = folder.cards.length;
-    const ok = window.confirm(`Excluir a pasta “${folder.name}”${count ? ` e seus ${count} flashcard${count === 1 ? '' : 's'}` : ''}?`);
-    if (!ok) return;
-    state.flashcardFolders = state.flashcardFolders.filter(item => item.id !== folderId);
-    delete state.openFlashcardFolders[folderId];
-    if (reviewState.folderId === folderId) closeReview();
-    saveState();
-    renderFlashcards();
-  }
-
-  function editFlashcard(folderId, cardId) {
-    const folder = findFlashcardFolder(folderId);
-    if (!folder) return;
-    const card = folder.cards.find(item => item.id === cardId);
-    if (!card) return;
-    const theme = window.prompt('Tema do flashcard:', card.theme);
-    if (theme === null) return;
-    const cleanedTheme = theme.trim();
-    if (!cleanedTheme) return;
-    const remember = window.prompt('O que devo lembrar:', card.remember);
-    if (remember === null) return;
-    const cleanedRemember = remember.trim();
-    if (!cleanedRemember) return;
-    card.theme = cleanedTheme.slice(0, 180);
-    card.remember = cleanedRemember.slice(0, 1200);
-    saveState();
-    renderFlashcards();
-  }
-
-  function deleteFlashcard(folderId, cardId) {
-    const folder = findFlashcardFolder(folderId);
-    if (!folder) return;
-    const card = folder.cards.find(item => item.id === cardId);
-    if (!card) return;
-    if (!window.confirm(`Excluir o flashcard “${card.theme}”?`)) return;
-    folder.cards = folder.cards.filter(item => item.id !== cardId);
-    if (reviewState.folderId === folderId) {
-      reviewState.order = reviewState.order.filter(id => id !== cardId);
-      if (reviewState.index >= reviewState.order.length) reviewState.index = Math.max(0, reviewState.order.length - 1);
-      if (!reviewState.order.length) closeReview();
-    }
-    saveState();
-    renderFlashcards();
-  }
+  function createFolder(name) { const cleaned=name.trim(); if(!cleaned)return; const folder={id:makeId('folder'),name:cleaned,cards:[]}; state.flashcardFolders.push(folder); state.openFlashcardFolders[folder.id]=true; saveState(); renderFlashcards(); }
+  function renameFolder(folderId) { const folder=findFlashcardFolder(folderId); if(!folder)return; const name=window.prompt('Novo nome da matéria/pasta:',folder.name); if(name===null||!name.trim())return; folder.name=name.trim().slice(0,80); saveState(); renderFlashcards(); }
+  function deleteFolder(folderId) { const folder=findFlashcardFolder(folderId); if(!folder)return; const count=folder.cards.length; if(!window.confirm(`Excluir a pasta “${folder.name}”${count ? ` e seus ${count} flashcard${count===1?'':'s'}` : ''}?`))return; state.flashcardFolders=state.flashcardFolders.filter(x=>x.id!==folderId); delete state.openFlashcardFolders[folderId]; if(reviewState.folderId===folderId)closeReview(); saveState(); renderFlashcards(); }
+  function editFlashcard(folderId,cardId) { const folder=findFlashcardFolder(folderId); if(!folder)return; const card=folder.cards.find(x=>x.id===cardId); if(!card)return; const theme=window.prompt('Tema do flashcard:',card.theme); if(theme===null||!theme.trim())return; const remember=window.prompt('O que devo lembrar:',card.remember); if(remember===null||!remember.trim())return; card.theme=theme.trim().slice(0,180); card.remember=remember.trim().slice(0,1200); saveState(); renderFlashcards(); }
+  function deleteFlashcard(folderId,cardId) { const folder=findFlashcardFolder(folderId); if(!folder)return; const card=folder.cards.find(x=>x.id===cardId); if(!card||!window.confirm(`Excluir o flashcard “${card.theme}”?`))return; folder.cards=folder.cards.filter(x=>x.id!==cardId); saveState(); renderFlashcards(); }
 
   function startFolderReview(folderId) {
-    const folder = findFlashcardFolder(folderId);
-    if (!folder || !folder.cards.length) return;
-    reviewState = { folderId, order: folder.cards.map(card => card.id), index: 0, flipped: false };
+    const folder=findFlashcardFolder(folderId); if(!folder||!folder.cards.length)return;
+    reviewState={folderId,order:folder.cards.map(c=>c.id),index:0,flipped:false};
     renderReview();
-    reviewPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const overlay=document.getElementById('reviewOverlay'); if(overlay) { overlay.hidden=false; document.body.classList.add('review-open'); }
+    document.getElementById('reviewCard')?.focus();
   }
-
-  function currentReviewCard() {
-    const folder = findFlashcardFolder(reviewState.folderId);
-    if (!folder || !reviewState.order.length) return { folder: null, card: null };
-    const id = reviewState.order[reviewState.index];
-    return { folder, card: folder.cards.find(item => item.id === id) || null };
-  }
-
+  function currentReviewCard() { const folder=findFlashcardFolder(reviewState.folderId); if(!folder||!reviewState.order.length)return{folder:null,card:null}; const id=reviewState.order[reviewState.index]; return{folder,card:folder.cards.find(x=>x.id===id)||null}; }
   function renderReview() {
-    const { folder, card } = currentReviewCard();
-    if (!folder || !card) {
-      reviewPanel.hidden = true;
-      return;
-    }
-    reviewPanel.hidden = false;
-    document.getElementById('reviewFolderName').textContent = folder.name;
-    document.getElementById('reviewPosition').textContent = `Cartão ${reviewState.index + 1} de ${reviewState.order.length}`;
-    document.getElementById('reviewSideLabel').textContent = reviewState.flipped ? 'O QUE DEVO LEMBRAR' : 'TEMA';
-    document.getElementById('reviewCardText').textContent = reviewState.flipped ? card.remember : card.theme;
-    const reviewCard = document.getElementById('reviewCard');
-    reviewCard.classList.toggle('is-flipped', reviewState.flipped);
-    document.getElementById('prevReviewBtn').disabled = reviewState.order.length <= 1;
-    document.getElementById('nextReviewBtn').disabled = reviewState.order.length <= 1;
+    const overlay=document.getElementById('reviewOverlay'); if(!overlay)return;
+    const {folder,card}=currentReviewCard(); if(!folder||!card){overlay.hidden=true;document.body.classList.remove('review-open');return;}
+    document.getElementById('reviewFolderName').textContent=folder.name;
+    document.getElementById('reviewPosition').textContent=`Cartão ${reviewState.index+1} de ${reviewState.order.length}`;
+    document.getElementById('reviewSideLabel').textContent=reviewState.flipped?'O QUE DEVO LEMBRAR':'TEMA';
+    document.getElementById('reviewCardText').textContent=reviewState.flipped?card.remember:card.theme;
+    document.getElementById('reviewCard').classList.toggle('is-flipped',reviewState.flipped);
+    document.getElementById('prevReviewBtn').disabled=reviewState.order.length<=1;
+    document.getElementById('nextReviewBtn').disabled=reviewState.order.length<=1;
   }
+  function closeReview() { reviewState={folderId:null,order:[],index:0,flipped:false}; const overlay=document.getElementById('reviewOverlay'); if(overlay)overlay.hidden=true; document.body.classList.remove('review-open'); }
+  function moveReview(step) { if(!reviewState.order.length)return; reviewState.index=(reviewState.index+step+reviewState.order.length)%reviewState.order.length; reviewState.flipped=false; renderReview(); }
+  function shuffleReview() { if(reviewState.order.length<2)return; for(let i=reviewState.order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[reviewState.order[i],reviewState.order[j]]=[reviewState.order[j],reviewState.order[i]];} reviewState.index=0;reviewState.flipped=false;renderReview(); }
 
-  function closeReview() {
-    reviewState = { folderId: null, order: [], index: 0, flipped: false };
-    reviewPanel.hidden = true;
-  }
-
-  function moveReview(step) {
-    if (!reviewState.order.length) return;
-    reviewState.index = (reviewState.index + step + reviewState.order.length) % reviewState.order.length;
-    reviewState.flipped = false;
-    renderReview();
-  }
-
-  function shuffleReview() {
-    if (reviewState.order.length < 2) return;
-    for (let i = reviewState.order.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [reviewState.order[i], reviewState.order[j]] = [reviewState.order[j], reviewState.order[i]];
-    }
-    reviewState.index = 0;
-    reviewState.flipped = false;
-    renderReview();
-  }
-
+  function showStatus(message,isError=false) { const el=document.getElementById('statusMessage'); if(!el)return; el.textContent=message; el.style.color=isError?'var(--danger)':'var(--success)'; setTimeout(()=>{if(el.textContent===message)el.textContent='';},4500); }
   function exportProgress() {
-    const payload = {
-      app: 'TJSP Estudos',
-      version: 2,
-      exportedAt: new Date().toISOString(),
-      state
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `tjsp-estudos-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    showStatus('Backup exportado com sucesso.');
+    const payload={app:'TJSP Estudos',version:3,exportedAt:new Date().toISOString(),state};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`tjsp-estudos-backup-${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); showStatus('Backup exportado com sucesso.');
   }
-
   function importProgress(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const payload = JSON.parse(String(reader.result));
-        const imported = payload && payload.state ? payload.state : payload;
-        if (!imported || typeof imported !== 'object') throw new Error('Formato inválido');
-        state.completed = imported.completed && typeof imported.completed === 'object' ? imported.completed : {};
-        state.notes = imported.notes && typeof imported.notes === 'object' ? imported.notes : {};
-        state.openSubjects = imported.openSubjects && typeof imported.openSubjects === 'object' ? imported.openSubjects : {};
-        state.flashcardFolders = Array.isArray(imported.flashcardFolders) ? imported.flashcardFolders : [];
-        state.openFlashcardFolders = imported.openFlashcardFolders && typeof imported.openFlashcardFolders === 'object' ? imported.openFlashcardFolders : {};
-        normalizeFlashcardFolders();
-        saveState();
-        render();
-        renderFlashcards();
-        showStatus('Progresso e flashcards importados com sucesso.');
-      } catch (_) {
-        showStatus('Não foi possível importar este arquivo de backup.', true);
-      }
-    };
-    reader.onerror = () => showStatus('Erro ao ler o arquivo.', true);
-    reader.readAsText(file);
+    if(!file)return; const reader=new FileReader(); reader.onload=()=>{try{const payload=JSON.parse(String(reader.result));const imported=payload&&payload.state?payload.state:payload;if(!imported||typeof imported!=='object')throw new Error('inválido'); state.completed=imported.completed&&typeof imported.completed==='object'?imported.completed:{};state.notes=imported.notes&&typeof imported.notes==='object'?imported.notes:{};state.openSubjects=imported.openSubjects&&typeof imported.openSubjects==='object'?imported.openSubjects:{};state.flashcardFolders=Array.isArray(imported.flashcardFolders)?imported.flashcardFolders:[];state.openFlashcardFolders=imported.openFlashcardFolders&&typeof imported.openFlashcardFolders==='object'?imported.openFlashcardFolders:{};normalizeFlashcardFolders();saveState();updateBackupSummary();showStatus('Progresso e flashcards importados com sucesso.');}catch(_){showStatus('Não foi possível importar este arquivo de backup.',true);}}; reader.onerror=()=>showStatus('Erro ao ler o arquivo.',true); reader.readAsText(file);
+  }
+  function resetProgress() { if(!window.confirm('Deseja realmente apagar todos os tópicos marcados e todas as anotações? Seus flashcards serão mantidos.'))return; state.completed={};state.notes={};state.openSubjects={};saveState();updateBackupSummary();showStatus('Tópicos e anotações zerados.'); }
+  function updateBackupSummary() { const s=topicStats(); const a=document.getElementById('backupTopicCount'),b=document.getElementById('backupFlashcardCount'); if(a)a.textContent=`${s.done}/${s.total}`; if(b)b.textContent=String(totalFlashcards()); }
+
+  function initTheme() {
+    const saved=localStorage.getItem(THEME_KEY); if(saved==='dark')document.documentElement.dataset.theme='dark';
+    document.getElementById('themeBtn')?.addEventListener('click',()=>{const dark=document.documentElement.dataset.theme==='dark'; document.documentElement.dataset.theme=dark?'light':'dark'; localStorage.setItem(THEME_KEY,dark?'light':'dark');});
   }
 
-  function resetProgress() {
-    const ok = window.confirm('Deseja realmente apagar todos os tópicos marcados e todas as anotações?');
-    if (!ok) return;
-    state.completed = {};
-    state.notes = {};
-    state.openSubjects = {};
-    saveState();
-    render();
-    showStatus('Progresso zerado.');
+  function initContentPage() {
+    const search=document.getElementById('searchInput'); search?.addEventListener('input',()=>{currentSearch=search.value;renderContent();});
+    document.querySelectorAll('.filter').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.filter').forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentFilter=btn.dataset.filter;renderContent();}));
+    renderContent();
   }
 
-  searchInput.addEventListener('input', () => {
-    currentSearch = searchInput.value;
-    render();
-  });
-
-  document.querySelectorAll('.filter').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentFilter = btn.dataset.filter;
-      render();
-    });
-  });
-
-
-
-  document.getElementById('newFolderBtn').addEventListener('click', () => {
-    folderForm.hidden = false;
-    folderNameInput.focus();
-  });
-
-  document.getElementById('cancelFolderBtn').addEventListener('click', () => {
-    folderForm.hidden = true;
-    folderNameInput.value = '';
-  });
-
-  folderForm.addEventListener('submit', event => {
-    event.preventDefault();
-    const name = folderNameInput.value.trim();
-    if (!name) return;
-    createFolder(name.slice(0, 80));
-    folderNameInput.value = '';
-    folderForm.hidden = true;
-  });
-
-  flashcardSearch.addEventListener('input', () => {
-    flashcardSearchTerm = flashcardSearch.value;
+  function initFlashcardsPage() {
+    const folderForm=document.getElementById('folderForm'); const folderInput=document.getElementById('folderNameInput');
+    document.getElementById('newFolderBtn')?.addEventListener('click',()=>{folderForm.hidden=false;folderInput.focus();});
+    document.getElementById('cancelFolderBtn')?.addEventListener('click',()=>{folderForm.hidden=true;folderInput.value='';});
+    folderForm?.addEventListener('submit',e=>{e.preventDefault();const name=folderInput.value.trim();if(!name)return;createFolder(name.slice(0,80));folderInput.value='';folderForm.hidden=true;});
+    const search=document.getElementById('flashcardSearch'); search?.addEventListener('input',()=>{flashcardSearchTerm=search.value;renderFlashcards();});
+    document.getElementById('reviewCard')?.addEventListener('click',()=>{reviewState.flipped=!reviewState.flipped;renderReview();});
+    document.getElementById('prevReviewBtn')?.addEventListener('click',()=>moveReview(-1));
+    document.getElementById('nextReviewBtn')?.addEventListener('click',()=>moveReview(1));
+    document.getElementById('shuffleReviewBtn')?.addEventListener('click',shuffleReview);
+    document.getElementById('closeReviewBtn')?.addEventListener('click',closeReview);
+    document.getElementById('reviewOverlay')?.addEventListener('click',e=>{if(e.target===e.currentTarget)closeReview();});
+    document.addEventListener('keydown',e=>{ if(!document.body.classList.contains('review-open'))return; if(e.key==='Escape')closeReview(); if(e.key==='ArrowLeft')moveReview(-1); if(e.key==='ArrowRight')moveReview(1); });
     renderFlashcards();
-  });
+  }
 
-  document.getElementById('reviewCard').addEventListener('click', () => {
-    reviewState.flipped = !reviewState.flipped;
-    renderReview();
-  });
-  document.getElementById('prevReviewBtn').addEventListener('click', () => moveReview(-1));
-  document.getElementById('nextReviewBtn').addEventListener('click', () => moveReview(1));
-  document.getElementById('shuffleReviewBtn').addEventListener('click', shuffleReview);
-  document.getElementById('closeReviewBtn').addEventListener('click', closeReview);
-
-  document.getElementById('exportBtn').addEventListener('click', exportProgress);
-  document.getElementById('importInput').addEventListener('change', e => {
-    importProgress(e.target.files && e.target.files[0]);
-    e.target.value = '';
-  });
-  document.getElementById('resetBtn').addEventListener('click', resetProgress);
-
-  document.querySelectorAll('.nav-item').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const target = btn.dataset.scroll;
-      if (target === 'top') window.scrollTo({ top: 0, behavior: 'smooth' });
-      if (target === 'subjects') document.querySelector('.section-heading').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      if (target === 'flashcards') document.getElementById('flashcardsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      if (target === 'backup') document.querySelector('.backup-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  });
-
-  const themeBtn = document.getElementById('themeBtn');
-  const savedTheme = localStorage.getItem(THEME_KEY);
-  if (savedTheme === 'dark') document.documentElement.dataset.theme = 'dark';
-  themeBtn.addEventListener('click', () => {
-    const dark = document.documentElement.dataset.theme === 'dark';
-    document.documentElement.dataset.theme = dark ? 'light' : 'dark';
-    localStorage.setItem(THEME_KEY, dark ? 'light' : 'dark');
-  });
+  function initBackupPage() {
+    document.getElementById('exportBtn')?.addEventListener('click',exportProgress);
+    document.getElementById('importInput')?.addEventListener('change',e=>{importProgress(e.target.files&&e.target.files[0]);e.target.value='';});
+    document.getElementById('resetBtn')?.addEventListener('click',resetProgress);
+    updateBackupSummary();
+  }
 
   normalizeFlashcardFolders();
-  updateCountdown();
-  render();
-  renderFlashcards();
+  initTheme();
+  if(page==='home'){updateCountdown();updateHome();}
+  if(page==='content')initContentPage();
+  if(page==='flashcards')initFlashcardsPage();
+  if(page==='backup')initBackupPage();
 
-  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
-  }
+  if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();

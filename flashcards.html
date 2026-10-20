@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="description" content="Controle de estudos para o concurso TJSP - Escrevente Técnico Judiciário 2027." />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Flashcards — TJSP Estudos</title>
+</head>
+<body data-page="flashcards">
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">REVISÃO ATIVA</p>
+        <h1>TJSP Estudos</h1>
+      </div>
+      <button id="themeBtn" class="icon-btn" type="button" aria-label="Alternar tema" title="Alternar tema">◐</button>
+    </header>
+    <main>
+      <section class="page-intro">
+        <div><p class="eyebrow">FLASHCARDS</p><h2>Pastas de revisão</h2><p>Organize seus cartões por matéria e revise um tema de cada vez.</p></div>
+        <span id="flashcardCounter" class="counter-badge">0 cartões</span>
+      </section>
+
+      <div class="flashcards-intro">
+        <div><strong>Organize por matéria</strong><p>Crie uma pasta para cada disciplina e salve um tema na frente e aquilo que precisa lembrar no verso.</p></div>
+        <button id="newFolderBtn" class="btn primary compact" type="button">+ Nova pasta</button>
+      </div>
+
+      <form id="folderForm" class="inline-form" hidden>
+        <label><span>Matéria da pasta</span><input id="folderNameInput" type="text" maxlength="80" placeholder="Ex.: Direito Penal" required /></label>
+        <div class="inline-form-actions"><button class="btn primary" type="submit">Criar pasta</button><button id="cancelFolderBtn" class="btn secondary" type="button">Cancelar</button></div>
+      </form>
+
+      <label class="search-wrap flashcard-search"><span class="sr-only">Buscar flashcards</span><input id="flashcardSearch" type="search" placeholder="Buscar pasta, tema ou conteúdo…" autocomplete="off" /></label>
+      <div id="flashcardFolderList" class="flashcard-folder-list"></div>
+    </main>
+<nav class="bottom-nav" aria-label="Navegação principal">
+      <a href="index.html" class="nav-item"><span>⌂</span>Início</a>
+      <a href="conteudo.html" class="nav-item"><span>✓</span>Conteúdo</a>
+      <a href="flashcards.html" class="nav-item active" aria-current="page"><span>▣</span>Flashcards</a>
+      <a href="backup.html" class="nav-item"><span>⇩</span>Backup</a>
+    </nav>
+  </div>
+
+  <div id="reviewOverlay" class="review-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="reviewFolderName">
+    <div id="reviewPanel" class="review-panel review-panel-full" aria-live="polite">
+      <div class="review-topline">
+        <div><p class="eyebrow">MODO REVISÃO</p><h2 id="reviewFolderName"></h2></div>
+        <button id="closeReviewBtn" class="review-close" type="button" aria-label="Fechar revisão">×</button>
+      </div>
+      <div class="review-progress-line"><p id="reviewPosition" class="review-position"></p><span>Toque no cartão para revelar</span></div>
+      <div class="review-card-area">
+        <button id="reviewCard" class="study-card study-card-full" type="button" aria-label="Virar flashcard">
+          <span id="reviewSideLabel" class="study-card-label">TEMA</span>
+          <strong id="reviewCardText"></strong>
+          <small>Toque para virar</small>
+        </button>
+      </div>
+      <div class="review-actions review-actions-full">
+        <button id="prevReviewBtn" class="btn secondary" type="button">← Anterior</button>
+        <button id="shuffleReviewBtn" class="btn secondary" type="button">Embaralhar</button>
+        <button id="nextReviewBtn" class="btn primary" type="button">Próximo →</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

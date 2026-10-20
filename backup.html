@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="description" content="Controle de estudos para o concurso TJSP - Escrevente Técnico Judiciário 2027." />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Backup — TJSP Estudos</title>
+</head>
+<body data-page="backup">
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">SEU PROGRESSO</p>
+        <h1>TJSP Estudos</h1>
+      </div>
+      <button id="themeBtn" class="icon-btn" type="button" aria-label="Alternar tema" title="Alternar tema">◐</button>
+    </header>
+    <main>
+      <section class="page-intro">
+        <div><p class="eyebrow">BACKUP</p><h2>Proteja seus dados</h2><p>Seu progresso e seus flashcards ficam salvos neste navegador.</p></div>
+      </section>
+
+      <section class="backup-panel backup-panel-page" aria-labelledby="backupTitle">
+        <div>
+          <h2 id="backupTitle">Exportar e restaurar</h2>
+          <p>Exporte um arquivo JSON antes de limpar os dados do navegador ou trocar de aparelho. O mesmo arquivo restaura tópicos estudados, anotações e flashcards.</p>
+        </div>
+        <div class="backup-summary">
+          <article><span>Tópicos estudados</span><strong id="backupTopicCount">0/0</strong></article>
+          <article><span>Flashcards</span><strong id="backupFlashcardCount">0</strong></article>
+        </div>
+        <div class="backup-actions">
+          <button id="exportBtn" class="btn primary" type="button">Exportar progresso</button>
+          <label class="btn secondary file-btn">Importar progresso<input id="importInput" type="file" accept="application/json,.json" /></label>
+          <button id="resetBtn" class="btn danger" type="button">Zerar tópicos estudados</button>
+        </div>
+        <p id="statusMessage" class="status-message" aria-live="polite"></p>
+      </section>
+    </main>
+<nav class="bottom-nav" aria-label="Navegação principal">
+      <a href="index.html" class="nav-item"><span>⌂</span>Início</a>
+      <a href="conteudo.html" class="nav-item"><span>✓</span>Conteúdo</a>
+      <a href="flashcards.html" class="nav-item"><span>▣</span>Flashcards</a>
+      <a href="backup.html" class="nav-item active" aria-current="page"><span>⇩</span>Backup</a>
+    </nav>
+  </div>
+  <script src="app.js" defer></script>
+</body>
+</html>

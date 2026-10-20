@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="styles.css" />
   <title>TJSP Estudos</title>
 </head>
-<body>
+<body data-page="home">
   <div class="app-shell">
     <header class="topbar">
       <div>
@@ -20,7 +20,6 @@
       </div>
       <button id="themeBtn" class="icon-btn" type="button" aria-label="Alternar tema" title="Alternar tema">◐</button>
     </header>
-
     <main>
       <section class="hero" aria-labelledby="heroTitle">
         <div class="hero-copy">
@@ -29,10 +28,7 @@
           <p id="countdown" class="countdown" aria-live="polite"></p>
         </div>
         <div class="progress-ring" id="progressRing" aria-label="Progresso geral">
-          <div>
-            <strong id="overallPct">0%</strong>
-            <span>concluído</span>
-          </div>
+          <div><strong id="overallPct">0%</strong><span>concluído</span></div>
         </div>
       </section>
 
@@ -44,151 +40,36 @@
       </section>
       <p class="fine-print">*Regra geral do edital para aprovação na redação. Candidatos em vagas reservadas possuem regra própria prevista no edital.</p>
 
-      <section class="controls" aria-label="Controles de estudo">
-        <label class="search-wrap">
-          <span class="sr-only">Buscar conteúdo</span>
-          <input id="searchInput" type="search" placeholder="Buscar matéria, lei, artigo ou tópico…" autocomplete="off" />
-        </label>
-        <div class="filter-row" role="group" aria-label="Filtrar tópicos">
-          <button class="filter active" type="button" data-filter="all">Todos</button>
-          <button class="filter" type="button" data-filter="pending">Pendentes</button>
-          <button class="filter" type="button" data-filter="done">Estudados</button>
+      <section class="home-section">
+        <div class="section-heading">
+          <div><p class="eyebrow">PAINEL</p><h2>Seu estudo</h2></div>
         </div>
-      </section>
-
-      <section class="section-heading">
-        <div>
-          <p class="eyebrow">CONTEÚDO DO EDITAL</p>
-          <h2>Disciplinas</h2>
+        <div class="home-grid">
+          <a class="home-action-card" href="conteudo.html">
+            <span class="home-action-icon">✓</span>
+            <div><strong>Conteúdo do edital</strong><p id="homeTopicProgress">0 de 0 tópicos estudados</p></div>
+            <span class="home-arrow">›</span>
+          </a>
+          <a class="home-action-card" href="flashcards.html">
+            <span class="home-action-icon">▣</span>
+            <div><strong>Flashcards</strong><p id="homeFlashcardCount">0 cartões criados</p></div>
+            <span class="home-arrow">›</span>
+          </a>
+          <a class="home-action-card" href="backup.html">
+            <span class="home-action-icon">⇩</span>
+            <div><strong>Backup</strong><p>Proteja seu progresso e leve os dados para outro aparelho.</p></div>
+            <span class="home-arrow">›</span>
+          </a>
         </div>
-        <span id="topicCounter" class="counter-badge">0/0</span>
-      </section>
-
-      <div id="subjectList" class="subject-list"></div>
-
-
-      <section id="flashcardsSection" class="flashcards-section" aria-labelledby="flashcardsTitle">
-        <div class="section-heading flashcards-heading">
-          <div>
-            <p class="eyebrow">REVISÃO ATIVA</p>
-            <h2 id="flashcardsTitle">Flashcards</h2>
-          </div>
-          <span id="flashcardCounter" class="counter-badge">0 cartões</span>
-        </div>
-
-        <div class="flashcards-intro">
-          <div>
-            <strong>Organize por matéria</strong>
-            <p>Crie uma pasta para cada disciplina e salve cartões com um tema na frente e aquilo que você precisa lembrar no verso.</p>
-          </div>
-          <button id="newFolderBtn" class="btn primary compact" type="button">+ Nova pasta</button>
-        </div>
-
-        <form id="folderForm" class="inline-form" hidden>
-          <label>
-            <span>Matéria da pasta</span>
-            <input id="folderNameInput" type="text" maxlength="80" placeholder="Ex.: Direito Penal" required />
-          </label>
-          <div class="inline-form-actions">
-            <button class="btn primary" type="submit">Criar pasta</button>
-            <button id="cancelFolderBtn" class="btn secondary" type="button">Cancelar</button>
-          </div>
-        </form>
-
-        <label class="search-wrap flashcard-search">
-          <span class="sr-only">Buscar flashcards</span>
-          <input id="flashcardSearch" type="search" placeholder="Buscar pasta, tema ou conteúdo…" autocomplete="off" />
-        </label>
-
-        <div id="reviewPanel" class="review-panel" hidden aria-live="polite">
-          <div class="review-topline">
-            <div>
-              <p class="eyebrow">MODO REVISÃO</p>
-              <h3 id="reviewFolderName"></h3>
-            </div>
-            <button id="closeReviewBtn" class="icon-btn small" type="button" aria-label="Fechar revisão">×</button>
-          </div>
-          <p id="reviewPosition" class="review-position"></p>
-          <button id="reviewCard" class="study-card" type="button" aria-label="Virar flashcard">
-            <span id="reviewSideLabel" class="study-card-label">TEMA</span>
-            <strong id="reviewCardText"></strong>
-            <small>Toque para virar</small>
-          </button>
-          <div class="review-actions">
-            <button id="prevReviewBtn" class="btn secondary" type="button">← Anterior</button>
-            <button id="shuffleReviewBtn" class="btn secondary" type="button">Embaralhar</button>
-            <button id="nextReviewBtn" class="btn primary" type="button">Próximo →</button>
-          </div>
-        </div>
-
-        <div id="flashcardFolderList" class="flashcard-folder-list"></div>
-      </section>
-
-      <section class="backup-panel" aria-labelledby="backupTitle">
-        <div>
-          <p class="eyebrow">SEU PROGRESSO</p>
-          <h2 id="backupTitle">Backup</h2>
-          <p>O progresso, as anotações e seus flashcards ficam salvos neste navegador. Exporte um backup antes de limpar dados ou trocar de aparelho.</p>
-        </div>
-        <div class="backup-actions">
-          <button id="exportBtn" class="btn primary" type="button">Exportar progresso</button>
-          <label class="btn secondary file-btn">
-            Importar progresso
-            <input id="importInput" type="file" accept="application/json,.json" />
-          </label>
-          <button id="resetBtn" class="btn danger" type="button">Zerar progresso</button>
-        </div>
-        <p id="statusMessage" class="status-message" aria-live="polite"></p>
       </section>
     </main>
-
-    <nav class="bottom-nav" aria-label="Navegação rápida">
-      <button type="button" data-scroll="top" class="nav-item active"><span>⌂</span>Início</button>
-      <button type="button" data-scroll="subjects" class="nav-item"><span>✓</span>Conteúdo</button>
-      <button type="button" data-scroll="flashcards" class="nav-item"><span>▣</span>Flashcards</button>
-      <button type="button" data-scroll="backup" class="nav-item"><span>⇩</span>Backup</button>
+<nav class="bottom-nav" aria-label="Navegação principal">
+      <a href="index.html" class="nav-item active" aria-current="page"><span>⌂</span>Início</a>
+      <a href="conteudo.html" class="nav-item"><span>✓</span>Conteúdo</a>
+      <a href="flashcards.html" class="nav-item"><span>▣</span>Flashcards</a>
+      <a href="backup.html" class="nav-item"><span>⇩</span>Backup</a>
     </nav>
   </div>
-
-  <template id="subjectTemplate">
-    <article class="subject-card">
-      <button class="subject-header" type="button" aria-expanded="false">
-        <div class="subject-title-wrap">
-          <div class="subject-icon" aria-hidden="true"></div>
-          <div>
-            <h3></h3>
-            <p class="subject-meta"></p>
-          </div>
-        </div>
-        <div class="subject-progress-wrap">
-          <strong class="subject-pct"></strong>
-          <span class="chevron">⌄</span>
-        </div>
-      </button>
-      <div class="progress-track" aria-hidden="true"><span></span></div>
-      <div class="subject-body" hidden>
-        <div class="topic-list"></div>
-      </div>
-    </article>
-  </template>
-
-  <template id="topicTemplate">
-    <div class="topic-item">
-      <label class="topic-check">
-        <input type="checkbox" />
-        <span class="custom-check" aria-hidden="true"></span>
-        <span class="topic-text"></span>
-      </label>
-      <button class="note-toggle" type="button" aria-label="Adicionar ou editar anotação" title="Anotação">✎</button>
-      <div class="note-box" hidden>
-        <label>
-          <span>Anotação pessoal</span>
-          <textarea rows="3" placeholder="Ex.: revisar questões da VUNESP, ponto de dificuldade, página da apostila…"></textarea>
-        </label>
-      </div>
-    </div>
-  </template>
-
   <script src="app.js" defer></script>
 </body>
 </html>

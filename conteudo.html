@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="description" content="Controle de estudos para o concurso TJSP - Escrevente Técnico Judiciário 2027." />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Conteúdo — TJSP Estudos</title>
+</head>
+<body data-page="content">
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">CONTEÚDO DO EDITAL</p>
+        <h1>TJSP Estudos</h1>
+      </div>
+      <button id="themeBtn" class="icon-btn" type="button" aria-label="Alternar tema" title="Alternar tema">◐</button>
+    </header>
+    <main>
+      <section class="page-intro">
+        <div><p class="eyebrow">CONTROLE DE ESTUDO</p><h2>Disciplinas</h2><p>Marque cada tópico conforme estudar e registre anotações para revisão.</p></div>
+        <span id="topicCounter" class="counter-badge">0/0</span>
+      </section>
+
+      <section class="controls" aria-label="Controles de estudo">
+        <label class="search-wrap">
+          <span class="sr-only">Buscar conteúdo</span>
+          <input id="searchInput" type="search" placeholder="Buscar matéria, lei, artigo ou tópico…" autocomplete="off" />
+        </label>
+        <div class="filter-row" role="group" aria-label="Filtrar tópicos">
+          <button class="filter active" type="button" data-filter="all">Todos</button>
+          <button class="filter" type="button" data-filter="pending">Pendentes</button>
+          <button class="filter" type="button" data-filter="done">Estudados</button>
+        </div>
+      </section>
+
+      <div id="subjectList" class="subject-list"></div>
+    </main>
+<nav class="bottom-nav" aria-label="Navegação principal">
+      <a href="index.html" class="nav-item"><span>⌂</span>Início</a>
+      <a href="conteudo.html" class="nav-item active" aria-current="page"><span>✓</span>Conteúdo</a>
+      <a href="flashcards.html" class="nav-item"><span>▣</span>Flashcards</a>
+      <a href="backup.html" class="nav-item"><span>⇩</span>Backup</a>
+    </nav>
+  </div>
+
+  <template id="subjectTemplate">
+    <article class="subject-card">
+      <button class="subject-header" type="button" aria-expanded="false">
+        <div class="subject-title-wrap"><div class="subject-icon" aria-hidden="true"></div><div><h3></h3><p class="subject-meta"></p></div></div>
+        <div class="subject-progress-wrap"><strong class="subject-pct"></strong><span class="chevron">⌄</span></div>
+      </button>
+      <div class="progress-track" aria-hidden="true"><span></span></div>
+      <div class="subject-body" hidden><div class="topic-list"></div></div>
+    </article>
+  </template>
+
+  <template id="topicTemplate">
+    <div class="topic-item">
+      <label class="topic-check"><input type="checkbox" /><span class="custom-check" aria-hidden="true"></span><span class="topic-text"></span></label>
+      <button class="note-toggle" type="button" aria-label="Adicionar ou editar anotação" title="Anotação">✎</button>
+      <div class="note-box" hidden><label><span>Anotação pessoal</span><textarea rows="3" placeholder="Ex.: revisar questões da VUNESP, ponto de dificuldade, página da apostila…"></textarea></label></div>
+    </div>
+  </template>
+  <script src="app.js" defer></script>
+</body>
+</html>
