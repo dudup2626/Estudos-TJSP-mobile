@@ -66,11 +66,69 @@
 
       <div id="subjectList" class="subject-list"></div>
 
+
+      <section id="flashcardsSection" class="flashcards-section" aria-labelledby="flashcardsTitle">
+        <div class="section-heading flashcards-heading">
+          <div>
+            <p class="eyebrow">REVISÃO ATIVA</p>
+            <h2 id="flashcardsTitle">Flashcards</h2>
+          </div>
+          <span id="flashcardCounter" class="counter-badge">0 cartões</span>
+        </div>
+
+        <div class="flashcards-intro">
+          <div>
+            <strong>Organize por matéria</strong>
+            <p>Crie uma pasta para cada disciplina e salve cartões com um tema na frente e aquilo que você precisa lembrar no verso.</p>
+          </div>
+          <button id="newFolderBtn" class="btn primary compact" type="button">+ Nova pasta</button>
+        </div>
+
+        <form id="folderForm" class="inline-form" hidden>
+          <label>
+            <span>Matéria da pasta</span>
+            <input id="folderNameInput" type="text" maxlength="80" placeholder="Ex.: Direito Penal" required />
+          </label>
+          <div class="inline-form-actions">
+            <button class="btn primary" type="submit">Criar pasta</button>
+            <button id="cancelFolderBtn" class="btn secondary" type="button">Cancelar</button>
+          </div>
+        </form>
+
+        <label class="search-wrap flashcard-search">
+          <span class="sr-only">Buscar flashcards</span>
+          <input id="flashcardSearch" type="search" placeholder="Buscar pasta, tema ou conteúdo…" autocomplete="off" />
+        </label>
+
+        <div id="reviewPanel" class="review-panel" hidden aria-live="polite">
+          <div class="review-topline">
+            <div>
+              <p class="eyebrow">MODO REVISÃO</p>
+              <h3 id="reviewFolderName"></h3>
+            </div>
+            <button id="closeReviewBtn" class="icon-btn small" type="button" aria-label="Fechar revisão">×</button>
+          </div>
+          <p id="reviewPosition" class="review-position"></p>
+          <button id="reviewCard" class="study-card" type="button" aria-label="Virar flashcard">
+            <span id="reviewSideLabel" class="study-card-label">TEMA</span>
+            <strong id="reviewCardText"></strong>
+            <small>Toque para virar</small>
+          </button>
+          <div class="review-actions">
+            <button id="prevReviewBtn" class="btn secondary" type="button">← Anterior</button>
+            <button id="shuffleReviewBtn" class="btn secondary" type="button">Embaralhar</button>
+            <button id="nextReviewBtn" class="btn primary" type="button">Próximo →</button>
+          </div>
+        </div>
+
+        <div id="flashcardFolderList" class="flashcard-folder-list"></div>
+      </section>
+
       <section class="backup-panel" aria-labelledby="backupTitle">
         <div>
           <p class="eyebrow">SEU PROGRESSO</p>
           <h2 id="backupTitle">Backup</h2>
-          <p>Os dados ficam salvos neste navegador. Exporte um backup antes de limpar dados do navegador ou trocar de aparelho.</p>
+          <p>O progresso, as anotações e seus flashcards ficam salvos neste navegador. Exporte um backup antes de limpar dados ou trocar de aparelho.</p>
         </div>
         <div class="backup-actions">
           <button id="exportBtn" class="btn primary" type="button">Exportar progresso</button>
@@ -87,6 +145,7 @@
     <nav class="bottom-nav" aria-label="Navegação rápida">
       <button type="button" data-scroll="top" class="nav-item active"><span>⌂</span>Início</button>
       <button type="button" data-scroll="subjects" class="nav-item"><span>✓</span>Conteúdo</button>
+      <button type="button" data-scroll="flashcards" class="nav-item"><span>▣</span>Flashcards</button>
       <button type="button" data-scroll="backup" class="nav-item"><span>⇩</span>Backup</button>
     </nav>
   </div>

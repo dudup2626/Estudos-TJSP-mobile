@@ -9,6 +9,9 @@ Aplicativo web progressivo (PWA) mobile-first para controlar os estudos do concu
 - Progresso geral e por disciplina.
 - Busca e filtros por pendentes/estudados.
 - Anotações por tópico.
+- Aba de flashcards com pastas por matéria.
+- Cartões com “Tema” na frente e “O que devo lembrar” no verso.
+- Busca, edição, exclusão e modo de revisão por pasta.
 - Contagem regressiva para a prova prevista em 14/03/2027.
 - Backup e restauração do progresso em JSON.
 - Tema claro/escuro.
@@ -45,7 +48,7 @@ A forma mais prática é publicar esta pasta em um serviço de hospedagem estát
 
 ## Importante sobre o progresso
 
-O progresso é salvo no `localStorage` do navegador. Use o botão **Exportar progresso** periodicamente para manter um backup. O arquivo JSON exportado pode ser restaurado pelo botão **Importar progresso**.
+O progresso, as anotações e os flashcards são salvos no `localStorage` do navegador. Use o botão **Exportar progresso** periodicamente para manter um backup. O arquivo JSON exportado pode ser restaurado pelo botão **Importar progresso**.
 
 ## Base do conteúdo
 
